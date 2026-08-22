@@ -1,5 +1,7 @@
+import { GameScreen } from "./features/game/GameScreen";
+
 function App() {
-  return <></>;
+  return <GameScreen />;
 }
 
 export default App;
