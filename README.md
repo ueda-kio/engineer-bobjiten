@@ -1,32 +1,77 @@
-# React + TypeScript + Vite
+# エンジニア縛りボブジテン
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+フロントエンドエンジニア約7名のオンライン飲み会用レクリエーション「エンジニア縛りボブジテン」の Web アプリ。
 
-Currently, two official plugins are available:
+カタカナ・英語を使わずにフロントエンド用語を説明し、他の参加者に当ててもらうゲーム。アプリは**出題のサポート**に特化し、正解判定・得点管理は行わない。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 遊び方
 
-## React Compiler
+1. 出題者が「お題を引く」を押す。難易度1〜3から1語ずつ、計3つの候補が提示される。
+2. 候補から1つ選ぶと「出題中」画面に切り替わる。
+3. 出題者はカタカナ・英語を使わずにお題を説明する。
+4. 最も早く答えた人を正解とする。判定は出題者の裁量。
+5. 説明が難しければ「引き直す」（パス券）で候補提示に戻れる。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### 常時公開してよい情報
 
-## Expanding the Oxlint configuration
+- お題の**文字数**。数え方は画面の表記通り。
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+### お助け機能
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+いずれも使用回数はアプリで管理しない。自己申告・口頭運用とする。
+
+- **カテゴリ公開** — お題のカテゴリを表示する。回答者の探索範囲を直接狭める。
+- **関連語ホワイトリスト** — お題に紐づく関連語を表示する。表示された語は説明に使ってよい。
+- **ワン・カタカナ** — 「〇〇を使います」と口頭宣言すれば、カタカナ語を1つだけ使ってよい。
+
+### アプリが管理しないルール
+
+- 既出のお題が再度引かれた場合は、出題者が引き直す。
+- 一定時間（目安30秒〜1分）で正解が出なければ、出題者が答えを開示して次の出題者へ。
+- 終了条件は設けない。任意のタイミングで終了する。
+
+## 構成
+
+MVP は通信同期を行わない。**各参加者が自分の端末で個別にアプリを開く**スタンドアロン構成で、ゲーム進行は参加者の口頭運用に委ねる。スマートフォンでの利用を主に想定している。
+
+React + Vite + TypeScript（SPA） / Tailwind CSS v4 / Vitest / oxlint + oxfmt / Cloudflare Workers（Static Assets）
+
+```
+src/
+  domain/       # React 非依存の純粋関数・型定義（Topic 型, Rng, お題ピック）
+  data/         # お題データと不変条件のテスト
+  features/
+    game/       # ゲーム状態遷移（useGame）と画面（GameScreen）
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+お題データは `src/data/topics.ts` に静的定数として持つ。バックエンドはない。
+
+## 開発
+
+パッケージマネージャは **pnpm**。
+
+```sh
+pnpm install
+pnpm dev
+```
+
+| 用途               | コマンド                                              |
+| ------------------ | ----------------------------------------------------- |
+| 開発サーバ         | `pnpm dev`                                            |
+| ビルド             | `pnpm build`                                          |
+| テスト（対象指定） | `pnpm exec vitest run --reporter=dot --bail=1 <path>` |
+| Lint（対象指定）   | `pnpm exec oxlint <path>`                             |
+| フォーマット       | `pnpm exec oxfmt <path>`                              |
+| デプロイ           | `pnpm deploy`                                         |
+
+lefthook により pre-commit で lint・format、pre-push で型チェック・テストが自動実行される。
+
+開発方針・ドメイン上の不変条件・テスト戦略は [CLAUDE.md](./CLAUDE.md)、要件の詳細は [docs/frontend_bobjiten_requirements.md](./docs/frontend_bobjiten_requirements.md) を参照。
+
+## 今後の予定（フェーズ2）
+
+得点・状態管理、ゲーム状態遷移の明示的な定義、終了条件のシステム制御、リアルタイム同期（ルーム機能・役割別ビュー）。いずれも MVP のスコープ外。
+
+## 注意
+
+「ボブジテン」は市販ボードゲームの商品名。公開範囲には配慮すること。
