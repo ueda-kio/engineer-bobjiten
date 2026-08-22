@@ -39,23 +39,23 @@ MVP は通信同期を行わず、各参加者が自端末で個別に開くス�
 
 ```
 src/
-  domain/              # React 非依存の純粋関数・型定義
-    topic.ts           # Topic 型, Category 型, DIFFICULTIES
-    rng.ts             # Rng 型, defaultRng
-    pick.ts            # pickTopics
-    __tests__/
+  domain/                # React 非依存の純粋関数・型定義
+    topic.ts             # Topic 型, Category 型, DIFFICULTIES
+    rng.ts               # Rng 型, defaultRng
+    pick.ts
+    pick.test.ts
   data/
-    topics.ts          # お題データ（静的定数）
-    __tests__/
-      topics.test.ts   # データ不変条件のテスト（4章参照）
+    topics.ts            # お題データ（静的定数）
+    topics.test.ts       # データ不変条件のテスト（4章参照）
   features/
     game/
-      useGame.ts       # ゲーム状態遷移
+      useGame.ts         # ゲーム状態遷移
+      useGame.test.ts
       GameScreen.tsx
-      __tests__/
-  components/          # 汎用 UI コンポーネント
+  components/            # 汎用 UI コンポーネント
+  setup-tests.ts         # Vitest セットアップ
   App.tsx
-  main.tsx
+  main.tsxs
 ```
 
 ### 配置ルール
@@ -198,6 +198,8 @@ AI はテストコードを書きすぎる傾向にあるため、以下のス�
 * テストケース名は日本語で、条件と結果が明確に伝わる文章にする。
 
 ```typescript
+import { describe, it, expect } from 'vitest'
+
 describe('対象の機能やモジュール名', () => {
   describe('正常系', () => {
     describe('〇〇の状態のとき', () => {
@@ -208,6 +210,8 @@ describe('対象の機能やモジュール名', () => {
   })
 })
 ```
+
+* `describe` / `it` / `expect` は必ず `vitest` から明示的に import する。Vitest の `globals: true` は有効化していないため、グローバル変数として参照する。コードは動作しない。
 
 ---
 
@@ -237,6 +241,8 @@ describe('対象の機能やモジュール名', () => {
 * テストの全件実行（8章）。
 * MVP スコープ外の機能の先回り実装。得点管理・終了条件・リアルタイム同期はフェーズ2。「将来のため」の抽象化も行わない。
 * `localStorage` 以外の永続化手段の導入。MVP はバックエンドを持たない。
+* テストでの Vitest グローバル API への依存（`globals: true` は使わない）。
+* `npm` / `yarn` コマンドの使用。パッケージマネージャは **pnpm** に統一する。
 
 ---
 
