@@ -59,6 +59,12 @@ const HelperButton = ({
   </button>
 );
 
+const STEPS = [
+  "難易度1〜3から1つずつ、計3つのお題を引く",
+  "その中から1つ選んで出題する",
+  "説明が難しければ引き直せる（パス券）",
+];
+
 const CandidateCard = ({ topic, onSelect }: { topic: Topic; onSelect: () => void }) => (
   <button
     type="button"
@@ -76,20 +82,37 @@ export const GameScreen = () => {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col gap-6 px-5 py-8">
       <header className="text-center">
-        <h1 className="text-xl font-bold tracking-tight text-slate-100">
+        <h1 className="text-3xl font-black tracking-tight text-slate-50">
           エンジニア縛りボブジテン
         </h1>
-        <p className="mt-1 text-xs text-slate-400">カタカナ・英語を使わずに説明しよう</p>
       </header>
 
       {state.phase === "idle" && (
-        <section className="flex flex-1 flex-col justify-center gap-6">
-          <ul className="space-y-2 rounded-2xl border border-slate-800 bg-slate-900/60 p-5 text-sm leading-relaxed text-slate-300">
-            <li>・難易度1〜3から1つずつ、計3つのお題を引く</li>
-            <li>・その中から1つ選んで出題する</li>
-            <li>・お題の文字数は常に公開してよい</li>
-            <li>・説明が難しければ引き直せる（パス券）</li>
-          </ul>
+        <section className="flex flex-1 flex-col justify-center gap-8">
+          <div className="rounded-3xl border border-indigo-500/40 bg-indigo-500/10 px-5 py-7 text-center">
+            <p className="text-xs font-bold tracking-[0.2em] text-indigo-300">きほんのルール</p>
+            <p className="mt-3 text-2xl leading-snug font-black text-slate-50">
+              カタカナ・英語を
+              <br />
+              使わずに説明する
+            </p>
+            <p className="mt-3 text-sm text-slate-300">お題の文字数は言ってもよい</p>
+          </div>
+
+          <div>
+            <h2 className="text-xs font-bold tracking-[0.2em] text-slate-500">あそびかた</h2>
+            <ol className="mt-3 space-y-3">
+              {STEPS.map((step, index) => (
+                <li key={step} className="flex items-start gap-3">
+                  <span className="mt-px flex size-6 shrink-0 items-center justify-center rounded-full bg-slate-800 text-xs font-bold text-slate-300 ring-1 ring-slate-700">
+                    {index + 1}
+                  </span>
+                  <span className="text-sm leading-6 text-slate-300">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+
           <PrimaryButton onClick={draw}>お題を引く</PrimaryButton>
         </section>
       )}
