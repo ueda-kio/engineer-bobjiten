@@ -41,11 +41,13 @@ const PrimaryButton = ({
 );
 
 const HelperButton = ({
-  children,
+  label,
+  note,
   onClick,
   disabled,
 }: {
-  children: React.ReactNode;
+  label: string;
+  note: string;
   onClick: () => void;
   disabled: boolean;
 }) => (
@@ -53,16 +55,18 @@ const HelperButton = ({
     type="button"
     onClick={onClick}
     disabled={disabled}
-    className="w-full rounded-xl border border-slate-700 bg-slate-800/60 px-4 py-3 text-sm font-semibold text-slate-200 transition active:scale-[0.98] enabled:hover:border-slate-500 disabled:opacity-40"
+    className="flex w-full flex-col items-center gap-1 rounded-xl border border-slate-700 bg-slate-800/60 px-3 py-3 transition active:scale-[0.98] enabled:hover:border-slate-500 disabled:opacity-40"
   >
-    {children}
+    <span className="text-sm font-semibold text-slate-200">{label}</span>
+    <span className="text-xs text-slate-400">{note}</span>
   </button>
 );
 
 const STEPS = [
   "難易度1〜3から1つずつ、計3つのお題を引く",
   "その中から1つ選んで出題する",
-  "説明が難しければ引き直せる（パス券）",
+  "説明に詰まったらお助け機能を使える（カテゴリ公開・ホワイトリスト・ワンカタカナ）",
+  "それでも難しければ引き直せる（パス券）",
 ];
 
 const CandidateCard = ({ topic, onSelect }: { topic: Topic; onSelect: () => void }) => (
@@ -146,13 +150,28 @@ export const GameScreen = () => {
           </div>
 
           <div className="flex flex-col gap-3">
+            <div>
+              <h2 className="text-xs font-bold tracking-[0.2em] text-slate-500">
+                説明に詰まったときのお助け機能
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-slate-400">
+                使うと当てやすくなる。使ったら口頭で宣言する。回数はアプリで管理しない。
+              </p>
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
-              <HelperButton onClick={revealCategory} disabled={state.categoryRevealed}>
-                カテゴリを見る
-              </HelperButton>
-              <HelperButton onClick={revealWhitelist} disabled={state.whitelistRevealed}>
-                ホワイトリストを見る
-              </HelperButton>
+              <HelperButton
+                label="カテゴリを見る"
+                note="お題の分野を明かす"
+                onClick={revealCategory}
+                disabled={state.categoryRevealed}
+              />
+              <HelperButton
+                label="ホワイトリストを見る"
+                note="解禁される語を見る"
+                onClick={revealWhitelist}
+                disabled={state.whitelistRevealed}
+              />
             </div>
 
             {state.categoryRevealed && (
@@ -178,8 +197,10 @@ export const GameScreen = () => {
               </div>
             )}
 
-            <p className="rounded-xl border border-dashed border-slate-700 p-3 text-center text-xs text-slate-400">
-              ワン・カタカナ使用可能（自己申告制）
+            <p className="rounded-xl border border-dashed border-slate-700 p-3 text-center text-xs leading-5 text-slate-400">
+              <span className="font-semibold text-slate-300">ワン・カタカナ</span>
+              <br />
+              「〇〇を使います」と宣言すれば、カタカナ語を1つだけ使える
             </p>
           </div>
 
