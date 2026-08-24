@@ -100,7 +100,14 @@ export const GameScreen = () => {
               <br />
               使わずに説明する
             </p>
-            <p className="mt-3 text-sm text-slate-300">お題の文字数は言ってもよい</p>
+            <p className="mt-3 text-sm leading-6 text-slate-300">
+              お題を日本語に訳した語も禁止
+              <br />
+              <span className="text-xs text-slate-400">例:「Promise」に対する「約束」</span>
+            </p>
+            <p className="mt-3 border-t border-indigo-500/20 pt-3 text-sm text-slate-300">
+              お題の文字数は言ってもよい
+            </p>
           </div>
 
           <div>
@@ -148,6 +155,10 @@ export const GameScreen = () => {
             </p>
             <p className="text-sm text-slate-400">{state.topic.word.length} 文字</p>
           </div>
+
+          <p className="-mt-3 text-center text-xs leading-5 text-slate-400">
+            カタカナ・英語、およびお題を日本語に訳した語は使えない
+          </p>
 
           <div className="flex flex-col gap-3">
             <div>
