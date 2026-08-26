@@ -1,44 +1,8 @@
+import { DifficultyBadge } from "../../components/DifficultyBadge";
+import { PrimaryButton } from "../../components/buttons";
 import { TOPICS } from "../../data/topics";
-import type { Difficulty, Topic } from "../../domain/topic";
+import type { Topic } from "../../domain/topic";
 import { useGame } from "./useGame";
-
-const DIFFICULTY_LABEL: Record<Difficulty, string> = {
-  1: "かんたん",
-  2: "ふつう",
-  3: "むずかしい",
-};
-
-const DIFFICULTY_STYLE: Record<Difficulty, string> = {
-  1: "bg-emerald-500/15 text-emerald-300 ring-emerald-500/30",
-  2: "bg-amber-500/15 text-amber-300 ring-amber-500/30",
-  3: "bg-rose-500/15 text-rose-300 ring-rose-500/30",
-};
-
-const DifficultyBadge = ({ difficulty }: { difficulty: Difficulty }) => (
-  <span
-    className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-bold ring-1 ${
-      DIFFICULTY_STYLE[difficulty]
-    }`}
-  >
-    {"★".repeat(difficulty)} {DIFFICULTY_LABEL[difficulty]}
-  </span>
-);
-
-const PrimaryButton = ({
-  children,
-  onClick,
-}: {
-  children: React.ReactNode;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="w-full rounded-2xl bg-indigo-500 px-6 py-4 text-lg font-bold text-white shadow-lg shadow-indigo-500/20 transition active:scale-[0.98] hover:bg-indigo-400"
-  >
-    {children}
-  </button>
-);
 
 const HelperButton = ({
   label,
