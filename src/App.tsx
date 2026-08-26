@@ -1,7 +1,7 @@
-import { GameScreen } from "./features/game/GameScreen";
+import { SessionScreen } from "./features/session/SessionScreen";
 
 function App() {
-  return <GameScreen />;
+  return <SessionScreen />;
 }
 
 export default App;

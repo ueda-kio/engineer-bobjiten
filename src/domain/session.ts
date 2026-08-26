@@ -186,7 +186,7 @@ export const reduceSession = (
 
     case "next": {
       if (state.phase !== "revealed") return state;
-      if (isFinished(state)) return { ...withoutPhaseData(state), phase: "result" };
+      if (isEndConditionMet(state)) return { ...withoutPhaseData(state), phase: "result" };
       return {
         ...withoutPhaseData(state),
         ...drawInto(state.usedTopicIds, deps),
@@ -208,7 +208,8 @@ export const reduceSession = (
   }
 };
 
-const isFinished = (state: SessionState): boolean =>
+/** Whether every player has presented the required number of answered rounds. */
+export const isEndConditionMet = (state: SessionState): boolean =>
   state.players.every(
     (player) => (state.presentCounts[player.id] ?? 0) >= state.endCondition.roundsPerPlayer,
   );
