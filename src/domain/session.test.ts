@@ -59,6 +59,14 @@ describe("reduceSession", () => {
       });
     });
 
+    describe("最初の参加者を追加したとき", () => {
+      it("その参加者がホストになること", () => {
+        const state = lobby(["p1", "p2"]);
+
+        expect(state.hostId).toBe("p1");
+      });
+    });
+
     describe("終了条件を更新したとき", () => {
       it("設定値が反映されること", () => {
         const state = run(
@@ -227,6 +235,38 @@ describe("reduceSession", () => {
     });
   });
 
+  describe("正常系 - 強制スキップ", () => {
+    describe("出題中に強制スキップしたとき", () => {
+      it("加点も出題回数の加算もされず、出題者が次の人へ進んで picking になること", () => {
+        const state = run(presenting(["p1", "p2", "p3"]), [{ type: "forceSkip" }], deps());
+
+        expect(state).toMatchObject({ phase: "picking", presenterIndex: 1 });
+        expect(state.scores).toEqual({ p1: 0, p2: 0, p3: 0 });
+        expect(state.presentCounts).toEqual({ p1: 0, p2: 0, p3: 0 });
+      });
+    });
+
+    describe("候補提示中に強制スキップしたとき", () => {
+      it("同じく出題者が次の人へ進むこと", () => {
+        const state = run(picking(["p1", "p2", "p3"]), [{ type: "forceSkip" }], deps());
+
+        expect(state).toMatchObject({ phase: "picking", presenterIndex: 1 });
+      });
+    });
+
+    describe("消費が積み上がった状態で強制スキップしたとき", () => {
+      it("消費が0に戻ること", () => {
+        const state = run(
+          presenting(["p1", "p2", "p3"]),
+          [{ type: "useHelp", kind: "category" }, { type: "forceSkip" }],
+          deps(),
+        );
+
+        expect(state).toMatchObject({ phase: "picking", consumptions: 0 });
+      });
+    });
+  });
+
   describe("異常系", () => {
     describe("参加者が1名のときゲーム開始を試みたとき", () => {
       it("開始されず lobby のままであること", () => {
@@ -243,6 +283,38 @@ describe("reduceSession", () => {
         const after = run(before, [{ type: "confirmAnswerer", playerId: "p2" }], deps());
 
         expect(after).toBe(before);
+      });
+    });
+
+    describe("lobby・revealed・result で強制スキップしたとき", () => {
+      it("いずれも状態が変化しないこと", () => {
+        const d = deps();
+        const inLobby = lobby(["p1", "p2"], d);
+        const inRevealed = run(
+          presenting(["p1", "p2"], d),
+          [{ type: "confirmAnswerer", playerId: "p2" }],
+          d,
+        );
+        const inResult = run(
+          run(
+            lobby(["p1", "p2"], d),
+            [{ type: "setEndCondition", roundsPerPlayer: 1 }, { type: "startGame" }],
+            d,
+          ),
+          [
+            { type: "selectTopic", topicId: "b1" },
+            { type: "confirmAnswerer", playerId: "p2" },
+            { type: "next" },
+            { type: "selectTopic", topicId: "b2" },
+            { type: "confirmAnswerer", playerId: "p1" },
+            { type: "next" },
+          ],
+          d,
+        );
+
+        for (const before of [inLobby, inRevealed, inResult]) {
+          expect(run(before, [{ type: "forceSkip" }], d)).toBe(before);
+        }
       });
     });
 

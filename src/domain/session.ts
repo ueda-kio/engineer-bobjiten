@@ -25,6 +25,8 @@ export type RevealedHelps = Record<HelpKind, boolean>;
 
 type SessionBase = {
   players: Player[];
+  /** The first registered player. Null until someone joins. */
+  hostId: string | null;
   scores: Record<string, number>;
   /** Rounds each player has presented. Only answered rounds are counted. */
   presentCounts: Record<string, number>;
@@ -61,7 +63,8 @@ export type SessionAction =
   | { type: "acceptKatakanaReport"; reporterId: string }
   | { type: "confirmAnswerer"; playerId: string }
   | { type: "next" }
-  | { type: "restart" };
+  | { type: "restart" }
+  | { type: "forceSkip" };
 
 export type SessionDeps = {
   topics: Topic[];
@@ -73,6 +76,7 @@ const NO_HELPS: RevealedHelps = { category: false, whitelist: false, oneKatakana
 export const createSession = (): SessionState => ({
   phase: "lobby",
   players: [],
+  hostId: null,
   scores: {},
   presentCounts: {},
   presenterIndex: 0,
@@ -97,7 +101,11 @@ export const reduceSession = (
   switch (action.type) {
     case "addPlayer":
       return state.phase === "lobby"
-        ? { ...state, players: [...state.players, { id: action.id, name: action.name }] }
+        ? {
+            ...state,
+            players: [...state.players, { id: action.id, name: action.name }],
+            hostId: state.hostId ?? action.id,
+          }
         : state;
 
     case "setEndCondition":
@@ -195,11 +203,22 @@ export const reduceSession = (
       };
     }
 
+    case "forceSkip": {
+      if (state.phase !== "picking" && state.phase !== "presenting") return state;
+      return {
+        ...withoutPhaseData(state),
+        ...drawInto(state.usedTopicIds, deps),
+        presenterIndex: (state.presenterIndex + 1) % state.players.length,
+        consumptions: 0,
+      };
+    }
+
     case "restart":
       return state.phase === "result"
         ? {
             ...createSession(),
             players: state.players,
+            hostId: state.hostId,
             scores: zeroed(state.players),
             presentCounts: zeroed(state.players),
             endCondition: state.endCondition,
@@ -237,6 +256,7 @@ const drawInto = (usedTopicIds: string[], deps: SessionDeps) => {
 /** Strips phase-specific fields so a spread cannot leak them into the next phase. */
 const withoutPhaseData = (state: SessionState): SessionBase => ({
   players: state.players,
+  hostId: state.hostId,
   scores: state.scores,
   presentCounts: state.presentCounts,
   presenterIndex: state.presenterIndex,
