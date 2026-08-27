@@ -21,7 +21,7 @@ type PublicBase = {
   presenterIndex: number;
   hostId: string | null;
   endCondition: EndCondition;
-  usedTopicsWereReset: boolean;
+  resetDifficulties: Difficulty[];
 };
 
 export type PublicSessionState = PublicBase &
@@ -63,7 +63,7 @@ export const toPublicView = (state: SessionState): PublicSessionState => {
     presenterIndex: state.presenterIndex,
     hostId: state.hostId,
     endCondition: state.endCondition,
-    usedTopicsWereReset: state.usedTopicsWereReset,
+    resetDifficulties: state.resetDifficulties,
   };
 
   switch (state.phase) {

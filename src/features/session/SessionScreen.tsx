@@ -32,7 +32,7 @@ export const SessionScreen = () => {
           presenter={presenter}
           candidates={state.candidates}
           consumptions={state.consumptions}
-          usedTopicsWereReset={state.usedTopicsWereReset}
+          resetDifficulties={state.resetDifficulties}
           dispatch={dispatch}
         />
       )}

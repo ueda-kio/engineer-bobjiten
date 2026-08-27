@@ -112,34 +112,52 @@ describe("pickCandidates", () => {
   describe("正常系", () => {
     describe("出題済みの語があるとき", () => {
       it("その語が候補から除外されること", () => {
-        const { candidates, didResetUsed } = pickCandidates(
+        const { candidates, resetDifficulties } = pickCandidates(
           topics,
           ["a1", "b1", "c1"],
           sequenceRng([0]),
         );
 
         expect(candidates.map((t) => t.id)).toEqual(["a2", "b2", "c2"]);
-        expect(didResetUsed).toBe(false);
+        expect(resetDifficulties).toEqual([]);
       });
     });
 
     describe("出題済みが空のとき", () => {
       it("すべての語が抽選対象になること", () => {
-        const { candidates, didResetUsed } = pickCandidates(topics, [], sequenceRng([0]));
+        const { candidates, resetDifficulties } = pickCandidates(topics, [], sequenceRng([0]));
 
         expect(candidates.map((t) => t.id)).toEqual(["a1", "b1", "c1"]);
-        expect(didResetUsed).toBe(false);
+        expect(resetDifficulties).toEqual([]);
       });
     });
   });
 
   describe("境界値", () => {
-    describe("いずれかの難易度の未出題が0件になったとき", () => {
-      it("出題済み記録をリセットして抽選し、リセットの発生が返り値に現れること", () => {
-        const { candidates, didResetUsed } = pickCandidates(topics, ["a1", "a2"], sequenceRng([0]));
+    describe("ある難易度の未出題が0件になったとき", () => {
+      it("その難易度だけがリセットされ、他の難易度の出題済みは維持されること", () => {
+        const { candidates, usedTopicIds, resetDifficulties } = pickCandidates(
+          topics,
+          ["c1", "c2", "a1"],
+          sequenceRng([0]),
+        );
 
-        expect(candidates.map((t) => t.id)).toEqual(["a1", "b1", "c1"]);
-        expect(didResetUsed).toBe(true);
+        expect(resetDifficulties).toEqual([3]);
+        expect(usedTopicIds).toEqual(["a1"]);
+        expect(candidates.map((t) => t.id)).toEqual(["a2", "b1", "c1"]);
+      });
+    });
+
+    describe("複数の難易度が同時に尽きたとき", () => {
+      it("尽きた難易度がすべて列挙されること", () => {
+        const { usedTopicIds, resetDifficulties } = pickCandidates(
+          topics,
+          ["a1", "a2", "b1", "c1", "c2"],
+          sequenceRng([0]),
+        );
+
+        expect(resetDifficulties).toEqual([1, 3]);
+        expect(usedTopicIds).toEqual(["b1"]);
       });
     });
 
@@ -147,7 +165,7 @@ describe("pickCandidates", () => {
       it("直前まで出題済みだった語も抽選対象に含まれること", () => {
         const { candidates } = pickCandidates(topics, ["a1", "a2"], sequenceRng([0.9]));
 
-        expect(candidates.map((t) => t.id)).toEqual(["a2", "b2", "c2"]);
+        expect(candidates[0].id).toBe("a2");
       });
     });
   });

@@ -355,8 +355,8 @@ describe("reduceSession", () => {
       });
     });
 
-    describe("次の抽選で語が枯渇するとき", () => {
-      it("出題済み記録がリセットされ、その事実が状態に記録されること", () => {
+    describe("次の抽選で特定の難易度の語が枯渇するとき", () => {
+      it("その難易度の出題済み記録だけがリセットされ、状態に記録されること", () => {
         const scarce = [topic("a1", 1), topic("b1", 2), topic("c1", 3)];
         const d = deps(scarce);
         const state = run(
@@ -369,7 +369,7 @@ describe("reduceSession", () => {
           d,
         );
 
-        expect(state).toMatchObject({ phase: "picking", usedTopicsWereReset: true });
+        expect(state).toMatchObject({ phase: "picking", resetDifficulties: [1] });
         expect(state.usedTopicIds).toEqual([]);
       });
     });

@@ -13,14 +13,19 @@ export const pickTopics = (topics: Topic[], rng: Rng): PickedTopics => {
 
 export type CandidatePick = {
   candidates: PickedTopics;
-  /** True when the used-topic history was cleared to keep the draw possible. */
-  didResetUsed: boolean;
+  /** The history after the draw, with exhausted difficulties cleared. */
+  usedTopicIds: string[];
+  /** Difficulties whose history was cleared to keep the draw possible. */
+  resetDifficulties: Difficulty[];
 };
 
 /**
  * Draws candidates while skipping already-presented topics.
- * When any difficulty has run out, the history is discarded and every topic
- * becomes available again, so the caller can tell players why words repeat.
+ *
+ * Exhaustion is judged per difficulty: when one runs out, only that
+ * difficulty's history is cleared. Clearing all three would let the first
+ * difficulty to run dry discard the others' history, which resets far more
+ * often than the word supply requires.
  */
 export const pickCandidates = (
   topics: Topic[],
@@ -28,18 +33,33 @@ export const pickCandidates = (
   rng: Rng,
 ): CandidatePick => {
   const used = new Set(usedTopicIds);
-  const remaining = topics.filter((topic) => !used.has(topic.id));
-  const isDrawable = DIFFICULTIES.every((difficulty) =>
-    remaining.some((topic) => topic.difficulty === difficulty),
-  );
+  const resetDifficulties: Difficulty[] = [];
 
-  return isDrawable
-    ? { candidates: pickTopics(remaining, rng), didResetUsed: false }
-    : { candidates: pickTopics(topics, rng), didResetUsed: true };
+  const [easy, normal, hard] = DIFFICULTIES.map((difficulty) => {
+    const all = topics.filter((topic) => topic.difficulty === difficulty);
+    const remaining = all.filter((topic) => !used.has(topic.id));
+    if (remaining.length > 0) return pickFrom(remaining, difficulty, rng);
+
+    resetDifficulties.push(difficulty);
+    for (const topic of all) used.delete(topic.id);
+    return pickFrom(all, difficulty, rng);
+  });
+
+  return {
+    candidates: [easy, normal, hard],
+    usedTopicIds: usedTopicIds.filter((id) => used.has(id)),
+    resetDifficulties,
+  };
 };
 
-const pickByDifficulty = (topics: Topic[], difficulty: Difficulty, rng: Rng): Topic => {
-  const candidates = topics.filter((topic) => topic.difficulty === difficulty);
+const pickByDifficulty = (topics: Topic[], difficulty: Difficulty, rng: Rng): Topic =>
+  pickFrom(
+    topics.filter((topic) => topic.difficulty === difficulty),
+    difficulty,
+    rng,
+  );
+
+const pickFrom = (candidates: Topic[], difficulty: Difficulty, rng: Rng): Topic => {
   if (candidates.length === 0) {
     throw new Error(`No topic available for difficulty ${difficulty}`);
   }

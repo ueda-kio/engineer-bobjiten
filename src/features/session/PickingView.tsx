@@ -1,19 +1,20 @@
 import { DifficultyBadge } from "../../components/DifficultyBadge";
 import type { PickedTopics } from "../../domain/pick";
 import type { Player, SessionAction } from "../../domain/session";
+import type { Difficulty } from "../../domain/topic";
 import { ConsumptionNotice, ResetNotice } from "./notices";
 
 export const PickingView = ({
   presenter,
   candidates,
   consumptions,
-  usedTopicsWereReset,
+  resetDifficulties,
   dispatch,
 }: {
   presenter: Player;
   candidates: PickedTopics;
   consumptions: number;
-  usedTopicsWereReset: boolean;
+  resetDifficulties: Difficulty[];
   dispatch: (action: SessionAction) => void;
 }) => (
   <section className="flex flex-col gap-4">
@@ -21,7 +22,7 @@ export const PickingView = ({
       <span className="font-bold text-slate-100">{presenter.name}</span> が出題するお題を選ぶ
     </p>
 
-    {usedTopicsWereReset && <ResetNotice />}
+    {resetDifficulties.length > 0 && <ResetNotice difficulties={resetDifficulties} />}
 
     <div className="flex flex-col gap-3">
       {candidates.map((topic) => (

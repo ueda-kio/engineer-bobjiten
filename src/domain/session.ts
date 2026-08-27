@@ -7,7 +7,7 @@ import {
   MIN_PLAYERS,
 } from "./rules";
 import { settleRound, type RoundAward } from "./score";
-import type { Topic } from "./topic";
+import type { Difficulty, Topic } from "./topic";
 
 export type Player = {
   id: string;
@@ -33,8 +33,8 @@ type SessionBase = {
   presenterIndex: number;
   endCondition: EndCondition;
   usedTopicIds: string[];
-  /** Whether the most recent draw had to clear the used-topic history. */
-  usedTopicsWereReset: boolean;
+  /** Difficulties whose history the most recent draw had to clear. */
+  resetDifficulties: Difficulty[];
 };
 
 export type SessionState = SessionBase &
@@ -82,7 +82,7 @@ export const createSession = (): SessionState => ({
   presenterIndex: 0,
   endCondition: { type: "rounds", roundsPerPlayer: DEFAULT_ROUNDS_PER_PLAYER },
   usedTopicIds: [],
-  usedTopicsWereReset: false,
+  resetDifficulties: [],
 });
 
 export const presenterOf = (state: SessionState): Player | undefined =>
@@ -242,14 +242,14 @@ const added = (
   points: number,
 ): Record<string, number> => ({ ...scores, [playerId]: (scores[playerId] ?? 0) + points });
 
-/** Draws the next candidates, recording whether the used history had to be cleared. */
+/** Draws the next candidates, carrying over which histories had to be cleared. */
 const drawInto = (usedTopicIds: string[], deps: SessionDeps) => {
-  const { candidates, didResetUsed } = pickCandidates(deps.topics, usedTopicIds, deps.rng);
+  const pick = pickCandidates(deps.topics, usedTopicIds, deps.rng);
   return {
     phase: "picking",
-    candidates,
-    usedTopicIds: didResetUsed ? [] : usedTopicIds,
-    usedTopicsWereReset: didResetUsed,
+    candidates: pick.candidates,
+    usedTopicIds: pick.usedTopicIds,
+    resetDifficulties: pick.resetDifficulties,
   } as const;
 };
 
@@ -262,5 +262,5 @@ const withoutPhaseData = (state: SessionState): SessionBase => ({
   presenterIndex: state.presenterIndex,
   endCondition: state.endCondition,
   usedTopicIds: state.usedTopicIds,
-  usedTopicsWereReset: state.usedTopicsWereReset,
+  resetDifficulties: state.resetDifficulties,
 });
