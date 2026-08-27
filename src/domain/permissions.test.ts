@@ -55,6 +55,9 @@ const HOST_ONLY: SessionAction[] = [
   { type: "forceSkip" },
 ];
 
+const ALL_FALSE = [false, false, false, false];
+const ALL_TRUE = [true, true, true, true];
+
 const PRESENTER_ONLY: SessionAction[] = [
   { type: "selectTopic", topicId: "b2" },
   { type: "redraw" },
@@ -68,12 +71,7 @@ describe("canPerform", () => {
       it("すべて許可されること", () => {
         const state = pickingWithPresenterP2();
 
-        expect(HOST_ONLY.map((action) => canPerform(state, action, "p1"))).toEqual([
-          true,
-          true,
-          true,
-          true,
-        ]);
+        expect(HOST_ONLY.map((action) => canPerform(state, action, "p1"))).toEqual(ALL_TRUE);
       });
     });
 
@@ -81,12 +79,7 @@ describe("canPerform", () => {
       it("すべて許可されること", () => {
         const state = pickingWithPresenterP2();
 
-        expect(PRESENTER_ONLY.map((action) => canPerform(state, action, "p2"))).toEqual([
-          true,
-          true,
-          true,
-          true,
-        ]);
+        expect(PRESENTER_ONLY.map((action) => canPerform(state, action, "p2"))).toEqual(ALL_TRUE);
       });
     });
   });
@@ -96,12 +89,7 @@ describe("canPerform", () => {
       it("すべて拒否されること", () => {
         const state = pickingWithPresenterP2();
 
-        expect(HOST_ONLY.map((action) => canPerform(state, action, "p2"))).toEqual([
-          false,
-          false,
-          false,
-          false,
-        ]);
+        expect(HOST_ONLY.map((action) => canPerform(state, action, "p2"))).toEqual(ALL_FALSE);
       });
     });
 
@@ -109,25 +97,18 @@ describe("canPerform", () => {
       it("すべて拒否されること", () => {
         const state = pickingWithPresenterP2();
 
-        expect(PRESENTER_ONLY.map((action) => canPerform(state, action, "p3"))).toEqual([
-          false,
-          false,
-          false,
-          false,
-        ]);
+        expect(PRESENTER_ONLY.map((action) => canPerform(state, action, "p3"))).toEqual(ALL_FALSE);
       });
     });
 
-    describe("カタカナ使用の指摘を出題者自身が行おうとするとき", () => {
-      it("拒否されること", () => {
+    describe("カタカナ使用の指摘を回答者が自分で確定しようとするとき", () => {
+      it("拒否され、承認できるのは出題者だけであること", () => {
         const state = presentingWithPresenterP2();
+        const report: SessionAction = { type: "acceptKatakanaReport", reporterId: "p3" };
 
-        expect(canPerform(state, { type: "acceptKatakanaReport", reporterId: "p2" }, "p2")).toBe(
-          false,
-        );
-        expect(canPerform(state, { type: "acceptKatakanaReport", reporterId: "p3" }, "p3")).toBe(
-          true,
-        );
+        expect(canPerform(state, report, "p3")).toBe(false);
+        expect(canPerform(state, report, "p1")).toBe(false);
+        expect(canPerform(state, report, "p2")).toBe(true);
       });
     });
   });
@@ -156,6 +137,26 @@ describe("canPerform", () => {
 
         expect(canPerform(empty, { type: "addPlayer", id: "p1", name: "p1" }, "p1")).toBe(true);
         expect(canPerform(empty, { type: "startGame" }, "p1")).toBe(false);
+      });
+    });
+
+    describe("未登録の参加者が入室するとき", () => {
+      it("自分自身の登録は許可され、他人の登録はホストにしか許可されないこと", () => {
+        const state = pickingWithPresenterP2();
+
+        expect(canPerform(state, { type: "addPlayer", id: "p4", name: "p4" }, "p4")).toBe(true);
+        expect(canPerform(state, { type: "addPlayer", id: "p4", name: "p4" }, "p2")).toBe(false);
+        expect(canPerform(state, { type: "addPlayer", id: "p4", name: "p4" }, "p1")).toBe(true);
+      });
+    });
+
+    describe("結果表示から次へ進むとき", () => {
+      it("ホストと現在の出題者の双方に許可され、それ以外は拒否されること", () => {
+        const state = pickingWithPresenterP2();
+
+        expect(canPerform(state, { type: "next" }, "p1")).toBe(true);
+        expect(canPerform(state, { type: "next" }, "p2")).toBe(true);
+        expect(canPerform(state, { type: "next" }, "p3")).toBe(false);
       });
     });
   });

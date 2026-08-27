@@ -12,21 +12,29 @@ export const canPerform = (
   action: SessionAction,
   actorId: string,
 ): boolean => {
-  // Nobody is registered yet, so the first player registers themselves and becomes host.
-  if (state.hostId === null) return action.type === "addPlayer";
-  if (!state.players.some((player) => player.id === actorId)) return false;
-
+  const isRegistered = state.players.some((player) => player.id === actorId);
   const isHost = actorId === state.hostId;
+
+  // Joining is done by the player themselves; the first to join becomes host.
+  // Adding somebody else is a host action.
+  if (action.type === "addPlayer") {
+    return (action.id === actorId && !isRegistered) || isHost;
+  }
+
+  if (!isRegistered) return false;
+
   const isPresenter = presenterOf(state)?.id === actorId;
 
   switch (action.type) {
-    case "addPlayer":
     case "setEndCondition":
     case "startGame":
-    case "next":
     case "restart":
     case "forceSkip":
       return isHost;
+
+    // Either may advance, so the game does not stall while the host is talking.
+    case "next":
+      return isHost || isPresenter;
 
     case "selectTopic":
     case "redraw":
@@ -34,7 +42,8 @@ export const canPerform = (
     case "confirmAnswerer":
       return isPresenter;
 
+    // The reported player admits the violation; answerers cannot award themselves.
     case "acceptKatakanaReport":
-      return !isPresenter;
+      return isPresenter;
   }
 };
