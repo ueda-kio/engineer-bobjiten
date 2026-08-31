@@ -40,8 +40,7 @@ React + Vite + TypeScript（SPA） / Tailwind CSS v4 / Vitest / oxlint + oxfmt /
 src/
   domain/       # React 非依存の純粋関数・型定義（Topic 型, Rng, お題ピック）
   data/         # お題データと不変条件のテスト
-  features/
-    game/       # ゲーム状態遷移（useGame）と画面（GameScreen）
+  features/     # 機能単位のディレクトリ（状態遷移フック・画面）
 ```
 
 お題データは `src/data/topics.ts` に静的定数として持つ。バックエンドはない。

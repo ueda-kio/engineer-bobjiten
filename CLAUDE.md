@@ -45,11 +45,7 @@ src/
   data/
     topics.ts          # お題データ（静的定数）
     topics.test.ts     # データ不変条件のテスト（4.1 参照）
-  features/
-    game/
-      useGame.ts       # ゲーム状態遷移
-      useGame.test.ts
-      GameScreen.tsx
+  features/            # 機能単位のディレクトリ（状態遷移フック・画面）
   components/          # 汎用 UI コンポーネント
   setup-tests.ts       # Vitest セットアップ
   App.tsx
@@ -57,7 +53,7 @@ src/
 ```
 
 - **ビジネスロジックは必ず `domain/` に純粋関数として置く。** React コンポーネント内に計算処理を書かない。
-- 状態遷移は custom hook（`useGame.ts` 等）に切り出す。コンポーネントは表示に専念させる。
+- 状態遷移は custom hook に切り出す。コンポーネントは表示に専念させる。
 - **テストは対象と同ディレクトリにコロケーションする。** 命名は `<対象ファイル名>.test.ts(x)`。`__tests__/` ディレクトリは作らない。
 
 ---
