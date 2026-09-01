@@ -108,13 +108,13 @@ export const authorizeJoin = (
     const claimed = registry.seats.find((seat) => seat.playerId === request.claimPlayerId);
     // Only a released seat may be claimed by name. Letting a name claim a seat
     // that still holds a token is the impersonation 6.2 exists to prevent.
-    if (!claimed || !isVacant(claimed)) return { kind: "rejected", reason: "seatUnavailable" };
+    if (!claimed || !isVacantSeat(claimed)) return { kind: "rejected", reason: "seatUnavailable" };
     return reseat(registry, claimed, request.connectionId, deps);
   }
 
   // Taking over a released seat is not a mid-game join: the player id is already
   // on the roster, so 5.6 does not apply and this stays allowed after start.
-  const vacant = registry.seats.filter(isVacant);
+  const vacant = registry.seats.filter(isVacantSeat);
   // Sitting somebody down without asking is only safe while there is no doubt
   // which seat is theirs. Beyond that the client has to offer the choice.
   if (vacant.length > 1) return { kind: "rejected", reason: "seatAmbiguous" };
@@ -150,7 +150,7 @@ export type SeatRelease = {
  */
 export const releaseSeat = (registry: ConnectionRegistry, playerId: string): SeatRelease => {
   const seat = registry.seats.find((current) => current.playerId === playerId);
-  if (!seat || isVacant(seat)) return { registry, displaced: null };
+  if (!seat || isVacantSeat(seat)) return { registry, displaced: null };
 
   return {
     registry: replaceSeat(registry, { ...seat, token: null, connectionId: null }),
@@ -175,8 +175,12 @@ export const disconnect = (
   ),
 });
 
-/** A seat the host released. Its player id, and so its score, stay behind. */
-const isVacant = (seat: Seat): boolean => seat.token === null;
+/**
+ * A seat the host released. Its player id, and so its score, stay behind.
+ * Exported so that the broadcast payload can tell a released seat from a player
+ * who is merely away without restating what an empty seat is.
+ */
+export const isVacantSeat = (seat: Seat): boolean => seat.token === null;
 
 const reseat = (
   registry: ConnectionRegistry,
