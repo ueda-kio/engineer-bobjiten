@@ -47,12 +47,15 @@ src/
     topics.test.ts     # データ不変条件のテスト（4.1 参照）
   features/            # 機能単位のディレクトリ（状態遷移フック・画面）
   components/          # 汎用 UI コンポーネント
+  sync/                # クライアントとワーカーが共有する同期の型定義
   setup-tests.ts       # Vitest セットアップ
   App.tsx
   main.tsx
+worker/                # Cloudflare Worker と Durable Object（同期レイヤ）
 ```
 
 - **ビジネスロジックは必ず `domain/` に純粋関数として置く。** React コンポーネント内に計算処理を書かない。
+- **`worker/` には判断を書かない。** 純粋関数を呼んで結果を配るだけに保つ。
 - 状態遷移は custom hook に切り出す。コンポーネントは表示に専念させる。
 - **テストは対象と同ディレクトリにコロケーションする。** 命名は `<対象ファイル名>.test.ts(x)`。`__tests__/` ディレクトリは作らない。
 

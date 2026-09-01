@@ -1,0 +1,29 @@
+{
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo",
+    "target": "es2023",
+    /* No DOM: the Workers runtime has its own WebSocket, and the generated
+       types below are the only ambient types this project should see. */
+    "lib": ["ES2023"],
+    "module": "esnext",
+    "types": ["./worker-configuration.d.ts"],
+    "skipLibCheck": true,
+
+    /* Bundler mode */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  /* The domain and data modules are pure, so they must also compile without
+     DOM. Tests are excluded: they run under Vitest, not workerd. */
+  "include": ["worker", "src/domain", "src/data", "src/sync"],
+  "exclude": ["**/*.test.ts"]
+}
