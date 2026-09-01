@@ -55,9 +55,12 @@ export const canPerform = (
  * the seat lives in the connection registry, not in the game state. The rule
  * still belongs here so that no permission check is written anywhere else.
  *
- * The host cannot release their own seat. Host handover is not implemented yet,
- * so a host who lost their token would leave nobody able to start, skip or
- * restart the game.
+ * The `targetPlayerId !== state.hostId` half is a stopgap, not a rule of the
+ * game: releasing a seat clears its token, so a host who released their own
+ * would leave nobody able to start, skip or restart, and the game would be
+ * stuck for good. Design 6.6 hands the role to another player once handover
+ * exists — implement that and this half should be removed, since a host who
+ * genuinely lost their token needs their seat freed like anyone else.
  */
 export const canReleaseSeat = (
   state: SessionState,

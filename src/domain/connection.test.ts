@@ -49,19 +49,15 @@ describe("authorizeJoin", () => {
       });
     });
 
-    describe("トークンなしで空席があるとき", () => {
-      it("最も古い空席の playerId を引き継ぎ、新しいトークンだけが発行されること", () => {
-        const registry = registryOf(vacated("p1"), connected("p2", "t2", "c2"), vacated("p3"));
+    describe("トークンなしで空席がちょうど1つあるとき", () => {
+      it("その席の playerId を引き継ぎ、新しいトークンだけが発行されること", () => {
+        const registry = registryOf(vacated("p1"), connected("p2", "t2", "c2"));
 
         expect(authorizeJoin(registry, { connectionId: "c9" }, deps(true))).toEqual({
           kind: "reseated",
           playerId: "p1",
           token: "id-1",
-          registry: registryOf(
-            connected("p1", "id-1", "c9"),
-            connected("p2", "t2", "c2"),
-            vacated("p3"),
-          ),
+          registry: registryOf(connected("p1", "id-1", "c9"), connected("p2", "t2", "c2")),
         });
       });
     });
@@ -104,6 +100,17 @@ describe("authorizeJoin", () => {
 
         expect(authorizeJoin(withVacant, stale, deps(true)).kind).toBe("reseated");
         expect(authorizeJoin(withoutVacant, stale, deps(true)).kind).toBe("created");
+      });
+    });
+
+    describe("トークンなしで空席が2つ以上あるとき", () => {
+      it("どの席か決められないため拒否されること", () => {
+        const registry = registryOf(vacated("p1"), connected("p2", "t2", "c2"), vacated("p3"));
+
+        expect(authorizeJoin(registry, { connectionId: "c9" }, deps(true))).toEqual({
+          kind: "rejected",
+          reason: "seatAmbiguous",
+        });
       });
     });
 
@@ -152,6 +159,19 @@ describe("authorizeJoin", () => {
           playerId: "p1",
           displaced: "古い接続",
           registry: registryOf(connected("p1", "t1", "c9")),
+        });
+      });
+    });
+
+    describe("すでに着席している接続から同じトークンで再度入室したとき", () => {
+      it("切断対象が返らないこと", () => {
+        const registry = registryOf(connected("p1", "t1", "c1"));
+
+        expect(authorizeJoin(registry, { connectionId: "c1", token: "t1" }, deps(true))).toEqual({
+          kind: "resumed",
+          playerId: "p1",
+          displaced: null,
+          registry,
         });
       });
     });

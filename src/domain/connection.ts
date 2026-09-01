@@ -35,9 +35,9 @@ export type JoinRequest = {
   /** Proves who the player is. Absent when the client holds no token. */
   token?: string;
   /**
-   * Which empty seat to take when no valid token is presented. Without it a
-   * returning player would inherit whichever seat happens to come first, and
-   * with several seats released at once that is somebody else's score.
+   * Which empty seat to take when no valid token is presented. Required as soon
+   * as more than one seat stands empty: picking one silently would hand the
+   * returning player somebody else's score.
    */
   claimPlayerId?: string;
 };
@@ -56,6 +56,8 @@ export type JoinDeps = {
 export type JoinRejection =
   /** The claimed seat is taken, still holds a token, or does not exist. */
   | "seatUnavailable"
+  /** Several seats stand empty and none was claimed: the client must ask which. */
+  | "seatAmbiguous"
   /** Nobody new may join and there was no seat to return to. */
   | "newPlayersNotAccepted";
 
@@ -87,13 +89,15 @@ export const authorizeJoin = (
 
   // A valid token identifies the player outright, whether or not the game has
   // started. The second connection wins so a phone that went to sleep holding a
-  // dead socket cannot lock its owner out.
+  // dead socket cannot lock its owner out. A retry on the connection that is
+  // already seated displaces nothing: reporting it would have the caller close
+  // the very connection it just accepted.
   if (held) {
     return {
       kind: "resumed",
       registry: replaceSeat(registry, { ...held, connectionId: request.connectionId }),
       playerId: held.playerId,
-      displaced: held.connectionId,
+      displaced: held.connectionId === request.connectionId ? null : held.connectionId,
     };
   }
 
@@ -110,8 +114,12 @@ export const authorizeJoin = (
 
   // Taking over a released seat is not a mid-game join: the player id is already
   // on the roster, so 5.6 does not apply and this stays allowed after start.
-  const vacant = registry.seats.find(isVacant);
-  if (vacant) return reseat(registry, vacant, request.connectionId, deps);
+  const vacant = registry.seats.filter(isVacant);
+  // Sitting somebody down without asking is only safe while there is no doubt
+  // which seat is theirs. Beyond that the client has to offer the choice.
+  if (vacant.length > 1) return { kind: "rejected", reason: "seatAmbiguous" };
+  const [onlyVacant] = vacant;
+  if (onlyVacant) return reseat(registry, onlyVacant, request.connectionId, deps);
 
   if (!deps.acceptsNewPlayers) return { kind: "rejected", reason: "newPlayersNotAccepted" };
 
