@@ -3,7 +3,7 @@ import type { EndCondition, Player, RevealedHelps, SessionState } from "./sessio
 import type { Category, Difficulty, Topic } from "./topic";
 
 /**
- * What everyone may know about the topic while it is being presented (design 6.2).
+ * What everyone may know about the topic while it is being presented (design 7.2).
  * Neither the word nor its id appears here: the topic list ships to every client,
  * so an id would give the answer away.
  */
@@ -53,7 +53,7 @@ export const toPresenterView = (state: SessionState): PresenterSessionState => s
 /**
  * Strips everything the answerers must not see.
  * `usedTopicIds` is dropped as well: it narrows down which words are still in
- * the pool, which is not information 6.2 grants to everyone.
+ * the pool, which is not information 7.2 grants to everyone.
  */
 export const toPublicView = (state: SessionState): PublicSessionState => {
   const base: PublicBase = {

@@ -1,7 +1,7 @@
 import { presenterOf, type SessionAction, type SessionState } from "./session";
 
 /**
- * Whether `actorId` is allowed to perform `action` right now (design 6.1).
+ * Whether `actorId` is allowed to perform `action` right now (design 7.1).
  *
  * Kept outside `reduceSession` on purpose: who sent a message is knowledge of
  * the transport, not of the state machine. The synced server must call this
