@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canPerform } from "./permissions";
+import { canPerform, canReleaseSeat } from "./permissions";
 import type { Rng } from "./rng";
 import {
   createSession,
@@ -157,6 +157,39 @@ describe("canPerform", () => {
         expect(canPerform(state, { type: "next" }, "p1")).toBe(true);
         expect(canPerform(state, { type: "next" }, "p2")).toBe(true);
         expect(canPerform(state, { type: "next" }, "p3")).toBe(false);
+      });
+    });
+  });
+});
+
+describe("canReleaseSeat", () => {
+  describe("正常系", () => {
+    describe("ホストが他の参加者の席を解放しようとするとき", () => {
+      it("許可されること", () => {
+        const state = pickingWithPresenterP2();
+
+        expect(canReleaseSeat(state, "p1", "p2")).toBe(true);
+      });
+    });
+  });
+
+  describe("異常系", () => {
+    describe("ホスト以外が席を解放しようとするとき", () => {
+      it("一般の参加者も未登録の actorId も拒否されること", () => {
+        const state = pickingWithPresenterP2();
+
+        expect(canReleaseSeat(state, "p2", "p3")).toBe(false);
+        expect(canReleaseSeat(state, "unknown", "p3")).toBe(false);
+      });
+    });
+  });
+
+  describe("境界値", () => {
+    describe("ホストが自分自身の席を解放しようとするとき", () => {
+      it("拒否されること", () => {
+        const state = pickingWithPresenterP2();
+
+        expect(canReleaseSeat(state, "p1", "p1")).toBe(false);
       });
     });
   });

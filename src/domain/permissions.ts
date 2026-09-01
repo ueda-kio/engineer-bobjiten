@@ -47,3 +47,20 @@ export const canPerform = (
       return isPresenter;
   }
 };
+
+/**
+ * Whether `actorId` may release `targetPlayerId`'s seat (design 7.1).
+ *
+ * Separate from `canPerform` because releasing a seat is not a `SessionAction`:
+ * the seat lives in the connection registry, not in the game state. The rule
+ * still belongs here so that no permission check is written anywhere else.
+ *
+ * The host cannot release their own seat. Host handover is not implemented yet,
+ * so a host who lost their token would leave nobody able to start, skip or
+ * restart the game.
+ */
+export const canReleaseSeat = (
+  state: SessionState,
+  actorId: string,
+  targetPlayerId: string,
+): boolean => actorId === state.hostId && targetPlayerId !== state.hostId;
