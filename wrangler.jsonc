@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "engineer-bobjiten",
+  "name": "engineer-bobjiten-sync",
   "compatibility_date": "2026-08-22",
   "main": "worker/index.ts",
   "assets": {
