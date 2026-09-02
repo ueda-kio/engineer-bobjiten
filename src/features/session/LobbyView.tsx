@@ -11,7 +11,10 @@ type LobbyProps = {
   endCondition: EndCondition;
   awayPlayerIds: string[];
   vacantPlayerIds: string[];
-  isHost: boolean;
+  /** Design 7.1: setting the end condition and starting belong to the host. */
+  canStart: boolean;
+  canSetEndCondition: boolean;
+  canReleaseSeat: (playerId: string) => boolean;
   dispatch: (action: SessionAction) => void;
   onReleaseSeat: (playerId: string) => void;
 };
@@ -26,7 +29,9 @@ export const LobbyView = ({
   endCondition,
   awayPlayerIds,
   vacantPlayerIds,
-  isHost,
+  canStart,
+  canSetEndCondition,
+  canReleaseSeat,
   dispatch,
   onReleaseSeat,
 }: LobbyProps) => (
@@ -48,7 +53,8 @@ export const LobbyView = ({
           hostId={hostId}
           awayPlayerIds={awayPlayerIds}
           vacantPlayerIds={vacantPlayerIds}
-          onReleaseSeat={isHost ? onReleaseSeat : undefined}
+          canReleaseSeat={canReleaseSeat}
+          onReleaseSeat={onReleaseSeat}
         />
       )}
     </div>
@@ -56,28 +62,31 @@ export const LobbyView = ({
     <div className="flex flex-col gap-3">
       <h2 className="text-xs font-bold tracking-[0.2em] text-slate-500">終了条件</h2>
 
-      <div className="flex flex-wrap gap-2">
-        {ROUND_OPTIONS.map((rounds) => (
-          <button
-            key={rounds}
-            type="button"
-            disabled={!isHost}
-            onClick={() => dispatch({ type: "setEndCondition", roundsPerPlayer: rounds })}
-            className={`rounded-xl border px-4 py-2 text-sm disabled:opacity-40 ${
-              endCondition.roundsPerPlayer === rounds
-                ? "border-indigo-400 bg-indigo-500/20 text-indigo-200"
-                : "border-slate-700 text-slate-300"
-            }`}
-          >
-            各 {rounds} 問
-          </button>
-        ))}
-      </div>
-
-      {!isHost && <p className="text-xs text-slate-500">終了条件とゲーム開始はホストが操作する</p>}
+      {canSetEndCondition ? (
+        <div className="flex flex-wrap gap-2">
+          {ROUND_OPTIONS.map((rounds) => (
+            <button
+              key={rounds}
+              type="button"
+              onClick={() => dispatch({ type: "setEndCondition", roundsPerPlayer: rounds })}
+              className={`rounded-xl border px-4 py-2 text-sm ${
+                endCondition.roundsPerPlayer === rounds
+                  ? "border-indigo-400 bg-indigo-500/20 text-indigo-200"
+                  : "border-slate-700 text-slate-300"
+              }`}
+            >
+              各 {rounds} 問
+            </button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-slate-400">
+          全員 {endCondition.roundsPerPlayer} 問出題で終了。設定と開始はホストが行う
+        </p>
+      )}
     </div>
 
-    {isHost && (
+    {canStart && (
       <PrimaryButton
         disabled={players.length < MIN_PLAYERS}
         onClick={() => dispatch({ type: "startGame" })}

@@ -1,14 +1,16 @@
-import { presenterOf, type SessionAction, type SessionState } from "./session";
+import { presenterOf, type ActingContext, type SessionAction } from "./session";
 
 /**
  * Whether `actorId` is allowed to perform `action` right now (design 7.1).
  *
  * Kept outside `reduceSession` on purpose: who sent a message is knowledge of
- * the transport, not of the state machine. The synced server must call this
- * before reducing; the single-device host screen reduces without it.
+ * the transport, not of the state machine. The server calls this before
+ * reducing, and the screen calls it again to decide which buttons to draw. The
+ * screen's answer is only a courtesy — the server's is the one that counts,
+ * since the two can disagree for a moment after the host role moves.
  */
 export const canPerform = (
-  state: SessionState,
+  state: ActingContext,
   action: SessionAction,
   actorId: string,
 ): boolean => {
@@ -69,7 +71,7 @@ export const canPerform = (
  * genuinely lost their token needs their seat freed like anyone else.
  */
 export const canReleaseSeat = (
-  state: SessionState,
+  state: ActingContext,
   actorId: string,
   targetPlayerId: string,
 ): boolean => actorId === state.hostId && targetPlayerId !== state.hostId;

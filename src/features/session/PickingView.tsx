@@ -2,7 +2,8 @@ import { DifficultyBadge } from "../../components/DifficultyBadge";
 import type { PickedTopics } from "../../domain/pick";
 import type { Player, SessionAction } from "../../domain/session";
 import type { Difficulty } from "../../domain/topic";
-import { ConsumptionNotice, ResetNotice } from "./notices";
+import { settleRound } from "../../domain/score";
+import { ResetNotice } from "./notices";
 
 export const PickingView = ({
   presenter,
@@ -32,20 +33,27 @@ export const PickingView = ({
           onClick={() => dispatch({ type: "selectTopic", topicId: topic.id })}
           className="flex w-full flex-col items-start gap-2 rounded-2xl border border-slate-700 bg-slate-800/60 p-4 text-left transition active:scale-[0.98] hover:border-indigo-400"
         >
-          <DifficultyBadge difficulty={topic.difficulty} />
+          <span className="flex w-full items-center justify-between">
+            <DifficultyBadge difficulty={topic.difficulty} />
+            {/* What this one is worth after what has already been spent. */}
+            <span className="text-xs text-slate-400">
+              選ぶと{" "}
+              <span className="font-bold text-slate-200">
+                {settleRound({ difficulty: topic.difficulty, consumptions }).presenter}点
+              </span>
+            </span>
+          </span>
           <span className="text-2xl font-bold break-all text-slate-50">{topic.word}</span>
         </button>
       ))}
     </div>
-
-    <ConsumptionNotice consumptions={consumptions} />
 
     <button
       type="button"
       onClick={() => dispatch({ type: "redraw" })}
       className="w-full rounded-xl px-4 py-3 text-sm font-semibold text-slate-400 underline-offset-4 hover:underline"
     >
-      引き直す（消費 +1）
+      引き直す（−1点）
     </button>
   </section>
 );

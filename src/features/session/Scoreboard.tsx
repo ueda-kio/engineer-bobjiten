@@ -10,8 +10,9 @@ type ScoreboardProps = {
   awayPlayerIds: string[];
   /** Seats the host has freed for somebody to take over (design 6.4). */
   vacantPlayerIds: string[];
-  /** Given only to the host; the server checks again with `canReleaseSeat`. */
-  onReleaseSeat?: (playerId: string) => void;
+  /** Whether this viewer may free a given seat. Asked per row via `canReleaseSeat`. */
+  canReleaseSeat: (playerId: string) => boolean;
+  onReleaseSeat: (playerId: string) => void;
 };
 
 /** Players in registration order, with who is presenting and who is missing. */
@@ -23,6 +24,7 @@ export const Scoreboard = ({
   hostId,
   awayPlayerIds,
   vacantPlayerIds,
+  canReleaseSeat,
   onReleaseSeat,
 }: ScoreboardProps) => (
   <ul className="divide-y divide-slate-800 rounded-2xl border border-slate-800 bg-slate-900/60">
@@ -57,8 +59,9 @@ export const Scoreboard = ({
               )
             )}
 
-            {/* Releasing your own seat would leave nobody able to host. */}
-            {onReleaseSeat && !vacant && player.id !== hostId && (
+            {/* `canReleaseSeat` already refuses the host's own seat and anybody
+                who is not the host, so no second copy of that rule lives here. */}
+            {!vacant && canReleaseSeat(player.id) && (
               <button
                 type="button"
                 onClick={() => onReleaseSeat(player.id)}

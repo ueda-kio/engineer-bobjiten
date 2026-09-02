@@ -93,7 +93,20 @@ export const createSession = (): SessionState => ({
   resetDifficulties: [],
 });
 
-export const presenterOf = (state: SessionState): Player | undefined =>
+/**
+ * The parts of a session that decide who may act.
+ *
+ * Both `SessionState` and the payloads sent to clients satisfy it, so a screen
+ * can ask the same question the server answers instead of keeping a second copy
+ * of design 7.1 that drifts from this one.
+ */
+export type ActingContext = {
+  players: Player[];
+  hostId: string | null;
+  presenterIndex: number;
+};
+
+export const presenterOf = (state: ActingContext): Player | undefined =>
   state.players[state.presenterIndex];
 
 /**

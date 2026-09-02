@@ -2,7 +2,7 @@ import { DifficultyBadge } from "../../components/DifficultyBadge";
 import type { PublicTopicHint } from "../../domain/view";
 import type { Player } from "../../domain/session";
 import type { Difficulty } from "../../domain/topic";
-import { ConsumptionNotice, ResetNotice } from "./notices";
+import { ResetNotice, RoundScoreNotice } from "./notices";
 
 /**
  * What an answerer sees while somebody else holds the topic.
@@ -56,6 +56,8 @@ export const WaitingView = ({
       分かったら口頭で答える。正解の確定は出題者が行う
     </p>
 
-    {consumptions !== undefined && <ConsumptionNotice consumptions={consumptions} />}
+    {hint !== undefined && consumptions !== undefined && (
+      <RoundScoreNotice difficulty={hint.difficulty} consumptions={consumptions} />
+    )}
   </section>
 );

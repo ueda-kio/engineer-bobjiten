@@ -2,12 +2,12 @@ import { DifficultyBadge } from "../../components/DifficultyBadge";
 import { settleRound } from "../../domain/score";
 import type { HelpKind, Player, RevealedHelps, SessionAction } from "../../domain/session";
 import type { Topic } from "../../domain/topic";
-import { ConsumptionNotice } from "./notices";
+import { RoundScoreNotice } from "./notices";
 
 const HELPS: { kind: HelpKind; label: string; note: string }[] = [
-  { kind: "category", label: "カテゴリを見る", note: "お題の分野を明かす" },
-  { kind: "whitelist", label: "ホワイトリストを見る", note: "解禁される語を見る" },
-  { kind: "oneKatakana", label: "ワン・カタカナ", note: "カタカナ語を1つ使う" },
+  { kind: "category", label: "カテゴリを見る", note: "−1点 / 分野を明かす" },
+  { kind: "whitelist", label: "ホワイトリスト", note: "−1点 / 使える語が増える" },
+  { kind: "oneKatakana", label: "ワン・カタカナ", note: "−1点 / カタカナを1つ" },
 ];
 
 export const PresentingView = ({
@@ -48,7 +48,7 @@ export const PresentingView = ({
             説明に詰まったときのお助け機能
           </h2>
           <p className="mt-1 text-xs leading-5 text-slate-400">
-            1つ使うごとに出題者の得点が1下がる。回答者の得点は変わらない
+            1つ使うごとに、この出題で自分が得る点が1下がる。回答者の得点は変わらない
           </p>
         </div>
 
@@ -97,7 +97,7 @@ export const PresentingView = ({
         )}
       </div>
 
-      <ConsumptionNotice consumptions={consumptions} />
+      <RoundScoreNotice difficulty={topic.difficulty} consumptions={consumptions} />
 
       <div className="flex flex-col gap-3">
         <h2 className="text-xs font-bold tracking-[0.2em] text-slate-500">
@@ -143,7 +143,7 @@ export const PresentingView = ({
         onClick={() => dispatch({ type: "redraw" })}
         className="w-full rounded-2xl border border-slate-700 px-6 py-4 font-bold text-slate-200 transition active:scale-[0.98] hover:border-slate-500"
       >
-        引き直す（消費 +1・出題者は交代しない）
+        引き直す（−1点・出題者は交代しない）
       </button>
     </section>
   );

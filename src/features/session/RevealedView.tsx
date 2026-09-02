@@ -11,6 +11,7 @@ export const RevealedView = ({
   presenter,
   answerer,
   isLastRound,
+  canAdvance,
   dispatch,
 }: {
   topic: Topic;
@@ -19,6 +20,8 @@ export const RevealedView = ({
   presenter?: Player;
   answerer?: Player;
   isLastRound: boolean;
+  /** Design 7.1 gives this to the host as well, so the game never waits on one person. */
+  canAdvance: boolean;
   dispatch: (action: SessionAction) => void;
 }) => (
   <section className="flex flex-col gap-6">
@@ -34,7 +37,7 @@ export const RevealedView = ({
         <span className="text-sm text-slate-300">
           出題 {presenter?.name}
           <span className="ml-2 text-xs text-slate-500">
-            難易度 {topic.difficulty} − 消費 {consumptions}
+            難易度 {topic.difficulty}・お助けと引き直し {consumptions} 回
           </span>
         </span>
         <span className="text-lg font-bold text-slate-100">+{award.presenter}</span>
@@ -45,8 +48,12 @@ export const RevealedView = ({
       </li>
     </ul>
 
-    <PrimaryButton onClick={() => dispatch({ type: "next" })}>
-      {isLastRound ? "結果を見る" : "次の出題へ"}
-    </PrimaryButton>
+    {canAdvance ? (
+      <PrimaryButton onClick={() => dispatch({ type: "next" })}>
+        {isLastRound ? "結果を見る" : "次の出題へ"}
+      </PrimaryButton>
+    ) : (
+      <p className="text-center text-xs text-slate-500">出題者かホストが次に進めるのを待っている</p>
+    )}
   </section>
 );

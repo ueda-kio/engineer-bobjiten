@@ -1,4 +1,5 @@
 import type { Payload, PresenterPayload, PublicPayload } from "../../domain/payload";
+import { canPerform, canReleaseSeat } from "../../domain/permissions";
 import type { SessionAction } from "../../domain/session";
 import { LobbyView } from "./LobbyView";
 import { PickingView } from "./PickingView";
@@ -24,7 +25,12 @@ type BoardProps = {
  */
 export const SessionBoard = ({ payload, viewerId, dispatch, onReleaseSeat }: BoardProps) => {
   const presenter = payload.players[payload.presenterIndex];
-  const isHost = viewerId === payload.hostId;
+
+  // The same rule the server applies, asked of the same payload, so a button
+  // cannot outlive the permission behind it. Presenter-only actions are not
+  // listed here: their payload only reaches the presenter in the first place.
+  const can = (action: SessionAction) => canPerform(payload, action, viewerId);
+  const canRelease = (playerId: string) => canReleaseSeat(payload, viewerId, playerId);
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,7 +43,8 @@ export const SessionBoard = ({ payload, viewerId, dispatch, onReleaseSeat }: Boa
           hostId={payload.hostId}
           awayPlayerIds={payload.awayPlayerIds}
           vacantPlayerIds={payload.vacantPlayerIds}
-          onReleaseSeat={isHost ? onReleaseSeat : undefined}
+          canReleaseSeat={canRelease}
+          onReleaseSeat={onReleaseSeat}
         />
       )}
 
@@ -48,7 +55,9 @@ export const SessionBoard = ({ payload, viewerId, dispatch, onReleaseSeat }: Boa
           endCondition={payload.endCondition}
           awayPlayerIds={payload.awayPlayerIds}
           vacantPlayerIds={payload.vacantPlayerIds}
-          isHost={isHost}
+          canStart={can({ type: "startGame" })}
+          canSetEndCondition={can({ type: "setEndCondition", roundsPerPlayer: 3 })}
+          canReleaseSeat={canRelease}
           dispatch={dispatch}
           onReleaseSeat={onReleaseSeat}
         />
@@ -65,6 +74,7 @@ export const SessionBoard = ({ payload, viewerId, dispatch, onReleaseSeat }: Boa
             (player) =>
               (payload.presentCounts[player.id] ?? 0) >= payload.endCondition.roundsPerPlayer,
           )}
+          canAdvance={can({ type: "next" })}
           dispatch={dispatch}
         />
       )}
@@ -74,7 +84,7 @@ export const SessionBoard = ({ payload, viewerId, dispatch, onReleaseSeat }: Boa
           players={payload.players}
           scores={payload.scores}
           presentCounts={payload.presentCounts}
-          canRestart={isHost}
+          canRestart={can({ type: "restart" })}
           dispatch={dispatch}
         />
       )}
@@ -84,6 +94,19 @@ export const SessionBoard = ({ payload, viewerId, dispatch, onReleaseSeat }: Boa
       ) : (
         <AnswererRound payload={payload} />
       )}
+
+      {/* Design 5.6: the host's way to move on from somebody who has gone quiet.
+          Only offered mid-round, where `forceSkip` actually does something. */}
+      {(payload.phase === "picking" || payload.phase === "presenting") &&
+        can({ type: "forceSkip" }) && (
+          <button
+            type="button"
+            onClick={() => dispatch({ type: "forceSkip" })}
+            className="w-full rounded-xl border border-slate-800 px-4 py-3 text-xs text-slate-500 transition hover:border-slate-600"
+          >
+            出題者をスキップして次の人へ（加点なし）
+          </button>
+        )}
     </div>
   );
 };
