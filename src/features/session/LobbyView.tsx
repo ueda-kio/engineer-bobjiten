@@ -1,102 +1,91 @@
-import { useState } from "react";
 import { PrimaryButton } from "../../components/buttons";
-import { MIN_PLAYERS } from "../../domain/rules";
-import type { SessionAction, SessionState } from "../../domain/session";
+import { MAX_ROUNDS_PER_PLAYER, MIN_PLAYERS } from "../../domain/rules";
+import type { EndCondition, Player, SessionAction } from "../../domain/session";
+import { Scoreboard } from "./Scoreboard";
 
-const ROUND_OPTIONS = [1, 2, 3, 4, 5];
+const ROUND_OPTIONS = [1, 2, 3, 4, 5].filter((rounds) => rounds <= MAX_ROUNDS_PER_PLAYER);
 
-export const LobbyView = ({
-  state,
-  dispatch,
-}: {
-  state: SessionState;
+type LobbyProps = {
+  players: Player[];
+  hostId: string | null;
+  endCondition: EndCondition;
+  awayPlayerIds: string[];
+  vacantPlayerIds: string[];
+  isHost: boolean;
   dispatch: (action: SessionAction) => void;
-}) => {
-  const [name, setName] = useState("");
-
-  const addPlayer = () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    dispatch({ type: "addPlayer", id: crypto.randomUUID(), name: trimmed });
-    setName("");
-  };
-
-  return (
-    <section className="flex flex-col gap-8">
-      <div className="flex flex-col gap-3">
-        <h2 className="text-xs font-bold tracking-[0.2em] text-slate-500">参加者</h2>
-
-        <form
-          className="flex gap-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            addPlayer();
-          }}
-        >
-          <input
-            value={name}
-            onChange={(event) => setName(event.target.value)}
-            placeholder="名前"
-            className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-900 px-4 py-3 text-slate-100 placeholder:text-slate-600 focus:border-indigo-400 focus:outline-none"
-          />
-          <button
-            type="submit"
-            className="shrink-0 rounded-xl bg-slate-800 px-5 font-bold text-slate-200 transition active:scale-[0.98] hover:bg-slate-700"
-          >
-            追加
-          </button>
-        </form>
-
-        {state.players.length === 0 ? (
-          <p className="text-sm text-slate-500">まだ誰も登録されていない</p>
-        ) : (
-          <ol className="flex flex-wrap gap-2">
-            {state.players.map((player, index) => (
-              <li
-                key={player.id}
-                className="rounded-full bg-slate-800 px-3 py-1.5 text-sm text-slate-100"
-              >
-                {index + 1}. {player.name}
-              </li>
-            ))}
-          </ol>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <h2 className="text-xs font-bold tracking-[0.2em] text-slate-500">終了条件</h2>
-        <p className="text-sm text-slate-400">全員が指定の問数を出題したら終了</p>
-        <div className="flex gap-2">
-          {ROUND_OPTIONS.map((rounds) => (
-            <button
-              key={rounds}
-              type="button"
-              onClick={() => dispatch({ type: "setEndCondition", roundsPerPlayer: rounds })}
-              className={`flex-1 rounded-xl border py-3 text-sm font-bold transition active:scale-[0.98] ${
-                state.endCondition.roundsPerPlayer === rounds
-                  ? "border-indigo-400 bg-indigo-500/20 text-indigo-200"
-                  : "border-slate-700 bg-slate-900/60 text-slate-400 hover:border-slate-500"
-              }`}
-            >
-              {rounds} 問
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex flex-col gap-2">
-        <PrimaryButton
-          onClick={() => dispatch({ type: "startGame" })}
-          disabled={state.players.length < MIN_PLAYERS}
-        >
-          ゲーム開始
-        </PrimaryButton>
-        {state.players.length < MIN_PLAYERS && (
-          <p className="text-center text-xs text-slate-500">
-            開始には {MIN_PLAYERS} 名以上の登録が必要
-          </p>
-        )}
-      </div>
-    </section>
-  );
+  onReleaseSeat: (playerId: string) => void;
 };
+
+/**
+ * Waiting to start. Nobody is registered from here any more: joining the room
+ * is what puts you on the roster, so identity is settled in one place.
+ */
+export const LobbyView = ({
+  players,
+  hostId,
+  endCondition,
+  awayPlayerIds,
+  vacantPlayerIds,
+  isHost,
+  dispatch,
+  onReleaseSeat,
+}: LobbyProps) => (
+  <section className="flex flex-col gap-8">
+    <div className="flex flex-col gap-3">
+      <h2 className="text-xs font-bold tracking-[0.2em] text-slate-500">
+        参加者 {players.length} 名
+      </h2>
+
+      {players.length === 0 ? (
+        <p className="rounded-2xl border border-slate-800 bg-slate-900/60 px-4 py-8 text-center text-sm text-slate-500">
+          まだ誰も入室していない
+        </p>
+      ) : (
+        <Scoreboard
+          players={players}
+          scores={{}}
+          presentCounts={{}}
+          hostId={hostId}
+          awayPlayerIds={awayPlayerIds}
+          vacantPlayerIds={vacantPlayerIds}
+          onReleaseSeat={isHost ? onReleaseSeat : undefined}
+        />
+      )}
+    </div>
+
+    <div className="flex flex-col gap-3">
+      <h2 className="text-xs font-bold tracking-[0.2em] text-slate-500">終了条件</h2>
+
+      <div className="flex flex-wrap gap-2">
+        {ROUND_OPTIONS.map((rounds) => (
+          <button
+            key={rounds}
+            type="button"
+            disabled={!isHost}
+            onClick={() => dispatch({ type: "setEndCondition", roundsPerPlayer: rounds })}
+            className={`rounded-xl border px-4 py-2 text-sm disabled:opacity-40 ${
+              endCondition.roundsPerPlayer === rounds
+                ? "border-indigo-400 bg-indigo-500/20 text-indigo-200"
+                : "border-slate-700 text-slate-300"
+            }`}
+          >
+            各 {rounds} 問
+          </button>
+        ))}
+      </div>
+
+      {!isHost && <p className="text-xs text-slate-500">終了条件とゲーム開始はホストが操作する</p>}
+    </div>
+
+    {isHost && (
+      <PrimaryButton
+        disabled={players.length < MIN_PLAYERS}
+        onClick={() => dispatch({ type: "startGame" })}
+      >
+        {players.length < MIN_PLAYERS
+          ? `あと ${MIN_PLAYERS - players.length} 名で開始できる`
+          : "ゲームを開始"}
+      </PrimaryButton>
+    )}
+  </section>
+);
