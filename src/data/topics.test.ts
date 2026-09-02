@@ -38,6 +38,18 @@ describe("お題データ", () => {
       expect(invalid).toEqual([]);
     });
 
+    it("関連語がすべてカタカナであること", () => {
+      // The whitelist exists to lift the ban on katakana for a few words. A
+      // related word that is not katakana lifts nothing and wastes a slot.
+      const katakana = /^[ァ-ヴー・]+$/;
+      const invalid = TOPICS.flatMap((topic) =>
+        topic.relatedWords
+          .filter((related) => !katakana.test(related))
+          .map((related) => `${topic.word}: ${related}`),
+      );
+      expect(invalid).toEqual([]);
+    });
+
     it("関連語が 3〜5 語であること", () => {
       const invalid = TOPICS.filter(
         (topic) => topic.relatedWords.length < 3 || topic.relatedWords.length > 5,
