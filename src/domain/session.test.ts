@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Rng } from "./rng";
+import { DEFAULT_ROUNDS_PER_PLAYER, MAX_ROUNDS_PER_PLAYER } from "./rules";
 import {
   createSession,
   reduceSession,
@@ -371,6 +372,51 @@ describe("reduceSession", () => {
 
         expect(state).toMatchObject({ phase: "picking", resetDifficulties: [1] });
         expect(state.usedTopicIds).toEqual([]);
+      });
+    });
+
+    describe("終了条件に範囲外の値を指定したとき", () => {
+      it("上限超過も 0 以下も無視されること", () => {
+        const applied = [MAX_ROUNDS_PER_PLAYER + 1, 0, -1].map(
+          (roundsPerPlayer) =>
+            run(lobby(["p1", "p2"]), [{ type: "setEndCondition", roundsPerPlayer }], deps())
+              .endCondition.roundsPerPlayer,
+        );
+
+        expect(applied).toEqual([
+          DEFAULT_ROUNDS_PER_PLAYER,
+          DEFAULT_ROUNDS_PER_PLAYER,
+          DEFAULT_ROUNDS_PER_PLAYER,
+        ]);
+      });
+    });
+  });
+
+  describe("正常系 - ホスト移譲", () => {
+    describe("参加者へホストを移譲したとき", () => {
+      it("ホストだけが変わり、進行状態と得点は変わらないこと", () => {
+        const before = presenting(["p1", "p2", "p3"]);
+
+        const after = run(before, [{ type: "transferHost", playerId: "p2" }], deps());
+
+        expect(after.hostId).toBe("p2");
+        expect(after).toMatchObject({
+          phase: "presenting",
+          scores: before.scores,
+          presenterIndex: before.presenterIndex,
+        });
+      });
+    });
+  });
+
+  describe("異常系 - ホスト移譲", () => {
+    describe("名簿にいない参加者へ移譲しようとしたとき", () => {
+      it("ホストが変わらないこと", () => {
+        const before = presenting(["p1", "p2", "p3"]);
+
+        const after = run(before, [{ type: "transferHost", playerId: "名簿にない" }], deps());
+
+        expect(after.hostId).toBe("p1");
       });
     });
   });

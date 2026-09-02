@@ -45,6 +45,12 @@ export const canPerform = (
     // The reported player admits the violation; answerers cannot award themselves.
     case "acceptKatakanaReport":
       return isPresenter;
+
+    // Nobody's to perform: design 7.1 gives host handover to the sync layer,
+    // which applies it directly when the away timer runs out. Letting a client
+    // send it would be a way to take the host role from whoever holds it.
+    case "transferHost":
+      return false;
   }
 };
 

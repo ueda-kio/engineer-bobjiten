@@ -4,6 +4,7 @@ import {
   CONSUMPTION_COST,
   DEFAULT_ROUNDS_PER_PLAYER,
   KATAKANA_REPORT_REWARD,
+  MAX_ROUNDS_PER_PLAYER,
   MIN_PLAYERS,
 } from "./rules";
 import { settleRound, type RoundAward } from "./score";
@@ -64,7 +65,14 @@ export type SessionAction =
   | { type: "confirmAnswerer"; playerId: string }
   | { type: "next" }
   | { type: "restart" }
-  | { type: "forceSkip" };
+  | { type: "forceSkip" }
+  /**
+   * Moves the host role to another player (design 6.6).
+   *
+   * Applied by the sync layer alone, which is the only part that can see who is
+   * still connected. Choosing the successor is its job; this only writes it.
+   */
+  | { type: "transferHost"; playerId: string };
 
 export type SessionDeps = {
   topics: Topic[];
@@ -109,7 +117,7 @@ export const reduceSession = (
         : state;
 
     case "setEndCondition":
-      return state.phase === "lobby"
+      return state.phase === "lobby" && isPlayableRounds(action.roundsPerPlayer)
         ? { ...state, endCondition: { type: "rounds", roundsPerPlayer: action.roundsPerPlayer } }
         : state;
 
@@ -213,6 +221,11 @@ export const reduceSession = (
       };
     }
 
+    case "transferHost":
+      return state.players.some((player) => player.id === action.playerId)
+        ? { ...state, hostId: action.playerId }
+        : state;
+
     case "restart":
       return state.phase === "result"
         ? {
@@ -232,6 +245,16 @@ export const isEndConditionMet = (state: SessionState): boolean =>
   state.players.every(
     (player) => (state.presentCounts[player.id] ?? 0) >= state.endCondition.roundsPerPlayer,
   );
+
+/**
+ * Out-of-range end conditions are ignored rather than clamped.
+ *
+ * A value past the cap does not fail loudly: `isEndConditionMet` simply never
+ * holds, so the game can never reach `result` and "もう一度" never becomes
+ * available. There is no way back from that inside a session.
+ */
+const isPlayableRounds = (rounds: number): boolean =>
+  Number.isInteger(rounds) && rounds >= 1 && rounds <= MAX_ROUNDS_PER_PLAYER;
 
 const zeroed = (players: Player[]): Record<string, number> =>
   Object.fromEntries(players.map((player) => [player.id, 0]));

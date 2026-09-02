@@ -18,6 +18,15 @@ import {
   releaseSeat,
   type ConnectionRegistry,
 } from "../src/domain/connection";
+import {
+  createDeadlines,
+  dueDeadlines,
+  earliestDeadline,
+  hostSuccessor,
+  nextDeadlines,
+  touchRoomLifetime,
+  type Deadlines,
+} from "../src/domain/deadlines";
 import { payloadFor } from "../src/domain/payload";
 import { canPerform, canReleaseSeat } from "../src/domain/permissions";
 import { defaultRng } from "../src/domain/rng";
@@ -34,6 +43,14 @@ const DEPS: SessionDeps = { topics: TOPICS, rng: defaultRng };
 
 /** The whole room as one record, per tech selection 5.2. */
 type RoomSnapshot = {
+  state: SessionState;
+  registry: ConnectionRegistry;
+  /** Stored, not held in memory: hibernation must not lose a pending deadline. */
+  deadlines: Deadlines;
+};
+
+/** What a handler changed, before the deadlines are worked out from it. */
+type RoomChange = {
   state: SessionState;
   registry: ConnectionRegistry;
 };
@@ -53,7 +70,11 @@ type Attachment = {
 const SNAPSHOT_KEY = "room";
 
 export class Room extends DurableObject<Env> {
-  #snapshot: RoomSnapshot = { state: createSession(), registry: createRegistry() };
+  #snapshot: RoomSnapshot = {
+    state: createSession(),
+    registry: createRegistry(),
+    deadlines: createDeadlines(Date.now()),
+  };
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
@@ -93,6 +114,35 @@ export class Room extends DurableObject<Env> {
     await this.#dropConnection(ws);
   }
 
+  /**
+   * The one alarm standing in for all three deadlines (design 6.8): everything
+   * that has come due is settled here, then the next alarm is armed.
+   */
+  override async alarm(): Promise<void> {
+    const due = dueDeadlines(this.#snapshot.deadlines, Date.now());
+    if (due.includes("roomExpired")) return this.#discard();
+
+    let state = this.#snapshot.state;
+
+    // The away presenter is skipped without scoring the round (design 6.5).
+    if (due.includes("presenterSkip")) {
+      state = reduceSession(state, { type: "forceSkip" }, DEPS);
+    }
+
+    // Who takes over needs the registry, so the sync layer picks and the reducer
+    // records (design 6.6). The original host does not get the role back on
+    // their return: nothing here or in `#join` hands it back.
+    if (due.includes("hostHandover")) {
+      const successor = hostSuccessor(state, this.#snapshot.registry);
+      if (successor !== null) {
+        state = reduceSession(state, { type: "transferHost", playerId: successor }, DEPS);
+      }
+    }
+
+    await this.#commit({ state, registry: this.#snapshot.registry }, "keep");
+    this.#broadcast();
+  }
+
   async #handle(ws: WebSocket, message: ClientMessage): Promise<void> {
     const attachment = getAttachment(ws);
     if (message.type === "join") return this.#join(ws, attachment, message);
@@ -108,8 +158,7 @@ export class Room extends DurableObject<Env> {
       }
 
       const released = releaseSeat(this.#snapshot.registry, message.playerId);
-      this.#snapshot = { ...this.#snapshot, registry: released.registry };
-      await this.#save();
+      await this.#commit({ state: this.#snapshot.state, registry: released.registry }, "renew");
       if (released.displaced !== null) this.#closeConnection(released.displaced);
       return this.#broadcast();
     }
@@ -123,11 +172,13 @@ export class Room extends DurableObject<Env> {
       return send(ws, { type: "denied", operation: action.type });
     }
 
-    this.#snapshot = {
-      ...this.#snapshot,
-      state: reduceSession(this.#snapshot.state, action, DEPS),
-    };
-    await this.#save();
+    await this.#commit(
+      {
+        state: reduceSession(this.#snapshot.state, action, DEPS),
+        registry: this.#snapshot.registry,
+      },
+      "renew",
+    );
     this.#broadcast();
   }
 
@@ -159,19 +210,24 @@ export class Room extends DurableObject<Env> {
     // Only a brand new seat joins the roster. A reseated player is already on
     // it, and taking the name they submitted would let whoever sits down rename
     // the player whose score the seat still carries.
-    this.#snapshot = {
-      registry: outcome.registry,
-      state:
-        outcome.kind === "created"
-          ? reduceSession(
-              state,
-              { type: "addPlayer", id: outcome.playerId, name: message.name },
-              DEPS,
-            )
-          : state,
-    };
     setAttachment(ws, { ...attachment, playerId: outcome.playerId });
-    await this.#save();
+    // "keep": entering a room is not an operation on it, so it does not push the
+    // room's expiry out. Reconnecting does clear this player's away deadline,
+    // which `nextDeadlines` derives from the registry (design 6.5).
+    await this.#commit(
+      {
+        registry: outcome.registry,
+        state:
+          outcome.kind === "created"
+            ? reduceSession(
+                state,
+                { type: "addPlayer", id: outcome.playerId, name: message.name },
+                DEPS,
+              )
+            : state,
+      },
+      "keep",
+    );
 
     // The token reaches the connection it was issued for and nothing else: it
     // never appears in a payload (design 7.2).
@@ -203,11 +259,13 @@ export class Room extends DurableObject<Env> {
     const seated = this.#snapshot.registry.seats.some((seat) => seat.connectionId === connectionId);
     if (!seated) return;
 
-    this.#snapshot = {
-      ...this.#snapshot,
-      registry: disconnect(this.#snapshot.registry, connectionId),
-    };
-    await this.#save();
+    await this.#commit(
+      {
+        state: this.#snapshot.state,
+        registry: disconnect(this.#snapshot.registry, connectionId),
+      },
+      "keep",
+    );
     this.#broadcast();
   }
 
@@ -230,8 +288,39 @@ export class Room extends DurableObject<Env> {
     }
   }
 
-  async #save(): Promise<void> {
+  /**
+   * Records a change, works out the deadlines it implies and re-arms the alarm.
+   *
+   * `lifetime` says whether this counts as use of the room: "renew" for a
+   * player's operation, "keep" for a connection change or an alarm. Design 6.7
+   * measures the room's life from the last operation, so seven phones going to
+   * sleep at the end of the night must not buy it another day.
+   */
+  async #commit(next: RoomChange, lifetime: "renew" | "keep"): Promise<void> {
+    const now = Date.now();
+    const carried =
+      lifetime === "renew"
+        ? touchRoomLifetime(this.#snapshot.deadlines, now)
+        : this.#snapshot.deadlines;
+
+    this.#snapshot = {
+      ...next,
+      deadlines: nextDeadlines(carried, next.state, next.registry, now),
+    };
     await this.ctx.storage.put(SNAPSHOT_KEY, this.#snapshot);
+    await this.ctx.storage.setAlarm(earliestDeadline(this.#snapshot.deadlines));
+  }
+
+  /** Design 6.7: the room is dropped, and whoever is still attached is let go. */
+  async #discard(): Promise<void> {
+    await this.ctx.storage.deleteAll();
+    this.#snapshot = {
+      state: createSession(),
+      registry: createRegistry(),
+      deadlines: createDeadlines(Date.now()),
+    };
+
+    for (const ws of this.ctx.getWebSockets()) ws.close(1001, "room expired");
   }
 }
 

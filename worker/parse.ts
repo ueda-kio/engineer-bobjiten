@@ -8,6 +8,7 @@
  * Checking the shape here keeps that guarantee out of the reducer.
  */
 
+import { MAX_ROUNDS_PER_PLAYER } from "../src/domain/rules";
 import type { HelpKind, SessionAction } from "../src/domain/session";
 import type { ClientMessage } from "../src/sync/protocol";
 
@@ -55,8 +56,11 @@ const toAction = (value: unknown): SessionAction | null => {
         ? { type: "addPlayer", id: value.id, name: value.name }
         : null;
 
+    // `reduceSession` ignores an out-of-range value, which would reach the
+    // client as an ordinary state message and read as a button doing nothing.
+    // Refusing it here turns that into an answer.
     case "setEndCondition":
-      return isPositiveInteger(value.roundsPerPlayer)
+      return isRoundsInRange(value.roundsPerPlayer)
         ? { type: "setEndCondition", roundsPerPlayer: value.roundsPerPlayer }
         : null;
 
@@ -75,6 +79,11 @@ const toAction = (value: unknown): SessionAction | null => {
       return isString(value.playerId)
         ? { type: "confirmAnswerer", playerId: value.playerId }
         : null;
+
+    // Accepted only so `canPerform` can refuse it as a denial rather than as an
+    // unreadable frame: design 7.1 reserves host handover for the sync layer.
+    case "transferHost":
+      return isString(value.playerId) ? { type: "transferHost", playerId: value.playerId } : null;
 
     case "startGame":
     case "redraw":
@@ -103,7 +112,10 @@ const isString = (value: unknown): value is string => typeof value === "string";
 
 const isOptionalString = (value: unknown): boolean => value === undefined || isString(value);
 
-const isPositiveInteger = (value: unknown): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value > 0;
+const isRoundsInRange = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= 1 &&
+  value <= MAX_ROUNDS_PER_PLAYER;
 
 const isHelpKind = (value: unknown): value is HelpKind => HELP_KINDS.some((kind) => kind === value);
